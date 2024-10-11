@@ -86,6 +86,7 @@ if not st.session_state.logged_in:
         if login(username, password):
             st.session_state.logged_in = True
             st.success("Logged in successfully!")
+            st.experimental_rerun()
         else:
             st.error("Invalid username or password")
 else:
@@ -99,7 +100,7 @@ else:
         st.experimental_rerun()
 
     # Add Item Page
-    if page == "Add Item":
+    if page == "Add Item" or st.session_state.logged_in:
         st.title("Add Inventory Item")
         with st.form(key='add_item_form'):
             name = st.text_input("Name")

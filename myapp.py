@@ -42,6 +42,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS inventory (
                 bill_amount REAL,
                 payment_amount REAL DEFAULT 0
             )''')
+
 c.execute('''CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 inventory_id INTEGER,
@@ -64,6 +65,7 @@ def calculate_bill(start_date, end_date, rate_per_day, quantity):
         return 0
     days_stored = (end_date - start_date).days
     return days_stored * rate_per_day * quantity
+
 # Function to log history
 def log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -84,7 +86,8 @@ if not st.session_state.logged_in:
         if login(username, password):
             st.session_state.logged_in = True
             st.success("Logged in successfully!")
-            st.experimental_rerun()
+            st.experimental_set_query_params(page="Add Item")  # Forcing page reload
+            st.stop()
         else:
             st.error("Invalid username or password")
 else:
@@ -95,7 +98,8 @@ else:
     if page == "Logout":
         st.session_state.logged_in = False
         st.success("Logged out successfully!")
-        st.experimental_rerun()
+        st.experimental_set_query_params(page="Login")  # Forcing page reload
+        st.stop()
 
     # Add Item Page
     if page == "Add Item" or st.session_state.logged_in:

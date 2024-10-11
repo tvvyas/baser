@@ -42,7 +42,6 @@ c.execute('''CREATE TABLE IF NOT EXISTS inventory (
                 bill_amount REAL,
                 payment_amount REAL DEFAULT 0
             )''')
-
 c.execute('''CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 inventory_id INTEGER,
@@ -65,7 +64,6 @@ def calculate_bill(start_date, end_date, rate_per_day, quantity):
         return 0
     days_stored = (end_date - start_date).days
     return days_stored * rate_per_day * quantity
-
 # Function to log history
 def log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -126,6 +124,8 @@ else:
                 log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
                 st.success("Item added successfully!")
             except Exception as e:
+                # Full code continuation:
+
                 st.error(f"Error adding item: {e}")
 
     # Update Item Page
@@ -187,7 +187,7 @@ else:
                 else:
                     st.error("Item not found.")
             except Exception as e:
-                st.error(f"Error deleting item: {e}")
+                    st.error(f"Error deleting item: {e}")
 
     # View Items Page
     elif page == "View Items":

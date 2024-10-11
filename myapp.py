@@ -57,7 +57,6 @@ c.execute('''CREATE TABLE IF NOT EXISTS history (
                 timestamp TEXT
             )''')
 conn.commit()
-
 # Function to calculate bill amount
 def calculate_bill(start_date, end_date, rate_per_day, quantity):
     if end_date < start_date:
@@ -85,9 +84,8 @@ if not st.session_state.logged_in:
     if st.button("Login"):
         if login(username, password):
             st.session_state.logged_in = True
-            st.success("Logged in successfully!")
-            st.experimental_set_query_params(page="Add Item")  # Forcing page reload
-            st.stop()
+            st.session_state.page = "Add Item"  # Set initial page after login
+            st.experimental_rerun()  # Force page reload to update session state
         else:
             st.error("Invalid username or password")
 else:
@@ -98,11 +96,9 @@ else:
     if page == "Logout":
         st.session_state.logged_in = False
         st.success("Logged out successfully!")
-        st.experimental_set_query_params(page="Login")  # Forcing page reload
-        st.stop()
-
+        st.experimental_rerun()  # Force page reload to reset session state
     # Add Item Page
-    if page == "Add Item" or st.session_state.logged_in:
+    if page == "Add Item" or st.session_state.page == "Add Item":
         st.title("Add Inventory Item")
         with st.form(key='add_item_form'):
             name = st.text_input("Name")
@@ -128,8 +124,6 @@ else:
                 log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
                 st.success("Item added successfully!")
             except Exception as e:
-                # Full code continuation:
-
                 st.error(f"Error adding item: {e}")
 
     # Update Item Page
@@ -173,7 +167,6 @@ else:
                                 st.error(f"Error updating item: {e}")
             except Exception as e:
                 st.error(f"Error loading item: {e}")
-
     # Delete Item Page
     elif page == "Delete Item":
         st.title("Delete Inventory Item")
@@ -191,7 +184,7 @@ else:
                 else:
                     st.error("Item not found.")
             except Exception as e:
-                    st.error(f"Error deleting item: {e}")
+                st.error(f"Error deleting item: {e}")
 
     # View Items Page
     elif page == "View Items":
@@ -202,7 +195,7 @@ else:
         except Exception as e:
             st.error(f"Error fetching items: {e}")
 
-    # History Page
+     # History Page
     elif page == "History":
         st.title("Inventory History")
         try:

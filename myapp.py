@@ -92,6 +92,9 @@ if page == "Add Item":
             c.execute('''INSERT INTO inventory (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount))
             conn.commit()
+            # Get the id of the last inserted item
+            inventory_id = c.lastrowid
+            log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
             st.success("Item added successfully!")
         except Exception as e:
             st.error(f"Error adding item: {e}")

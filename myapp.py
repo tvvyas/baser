@@ -11,12 +11,12 @@ def callback():
     st.session_state.button_clicked = True
 
 # Retrieve database credentials from Streamlit app settings
-secret_key = st.secrets["database"]["secret_key"]
+db_name = st.secrets["database"]["name"]
 db_username = st.secrets["database"]["username"]
 db_password = st.secrets["database"]["password"]
 
-# Connect to SQLite database using secret key and credentials
-conn = sqlite3.connect(f'{secret_key}.db')
+# Connect to SQLite database using credentials
+conn = sqlite3.connect(f'{db_name}.db')
 c = conn.cursor()
 
 # Create inventory and history tables if they don't exist
@@ -144,4 +144,30 @@ elif page == "Delete Item":
     item_id = st.number_input("Enter the ID of the item to delete", min_value=1)
     if st.button("Delete Item"):
         try:
-            c.execute("DELETE FROM inventory WHERE id=?", (item_id
+            c.execute("DELETE FROM inventory WHERE id=?", (item_id,))
+            conn.commit()
+            st.success("Item deleted successfully!")
+            log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
+        except Exception as e:
+            st.error(f"Error deleting item: {e}")
+
+# View Items Page
+elif page == "View Items":
+    st.title("View Inventory Items")
+    try:
+        inventory_data = pd.read_sql_query("SELECT * FROM inventory", conn)
+        st.dataframe(inventory_data)
+    except Exception as e:
+        st.error(f"Error fetching items: {e}")
+
+# History Page
+elif page == "History":
+    st.title("Inventory History")
+    try:
+        history_data = pd.read_sql_query("SELECT * FROM history", conn)
+        st.dataframe(history_data)
+    except Exception as e:
+        st.error(f"Error fetching history: {e}")
+
+# Close the database connection
+conn.close()

@@ -92,7 +92,6 @@ if page == "Add Item":
             c.execute('''INSERT INTO inventory (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount))
             conn.commit()
-            log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
             st.success("Item added successfully!")
         except Exception as e:
             st.error(f"Error adding item: {e}")
@@ -148,9 +147,9 @@ elif page == "Delete Item":
             c.execute("SELECT * FROM inventory WHERE id=?", (item_id,))
             item = c.fetchone()
             if item:
+                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8]
                 c.execute("DELETE FROM inventory WHERE id=?", (item_id,))
                 conn.commit()
-                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8]
                 log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
                 st.success("Item deleted successfully!")
             else:

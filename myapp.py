@@ -145,10 +145,16 @@ elif page == "Delete Item":
     item_id = st.number_input("Enter the ID of the item to delete", min_value=1)
     if st.button("Delete Item"):
         try:
-            c.execute("DELETE FROM inventory WHERE id=?", (item_id,))
-            conn.commit()
-            st.success("Item deleted successfully!")
-            log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
+            c.execute("SELECT * FROM inventory WHERE id=?", (item_id,))
+            item = c.fetchone()
+            if item:
+                c.execute("DELETE FROM inventory WHERE id=?", (item_id,))
+                conn.commit()
+                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8]
+                log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
+                st.success("Item deleted successfully!")
+            else:
+                st.error("Item not found.")
         except Exception as e:
             st.error(f"Error deleting item: {e}")
 

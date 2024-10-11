@@ -14,8 +14,10 @@ def callback():
     st.session_state.button_clicked = True
 
 def login(username, password):
-    users_db = {"user1": "password1", "user2": "password2"}  # This should be replaced with a secure database in a real application
-    if username in users_db and users_db[username] == password:
+    # Retrieve user credentials from Streamlit app settings
+    stored_username = st.secrets["user_credentials"]["username"]
+    stored_password = st.secrets["user_credentials"]["password"]
+    if username == stored_username and password == stored_password:
         return True
     return False
 

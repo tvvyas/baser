@@ -1,63 +1,167 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import sqlite3
+from datetime import datetime, date
 
-# Initialize or load the inventory data
-if 'inventory_data' not in st.session_state:
-    st.session_state['inventory_data'] = pd.DataFrame(columns=['Name', 'GST Number', 'Start Date', 'End Date', 'Quantity', 'Rate per Day', 'Bill Amount'])
+# Define session state variables
+if 'button_clicked' not in st.session_state:
+    st.session_state.button_clicked = False
+
+def callback():
+    st.session_state.button_clicked = True
+
+# Connect to SQLite database
+conn = sqlite3.connect('inventory.db')
+c = conn.cursor()
+
+# Create inventory and history tables if they don't exist
+c.execute('''CREATE TABLE IF NOT EXISTS inventory (
+                id INTEGER PRIMARY KEY,
+                name TEXT,
+                gst_number TEXT,
+                start_date TEXT,
+                end_date TEXT,
+                quantity INTEGER,
+                rate_per_day REAL,
+                bill_amount REAL,
+                payment_amount REAL DEFAULT 0
+            )''')
+
+c.execute('''CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                inventory_id INTEGER,
+                name TEXT,
+                gst_number TEXT,
+                start_date TEXT,
+                end_date TEXT,
+                quantity INTEGER,
+                rate_per_day REAL,
+                bill_amount REAL,
+                payment_amount REAL,
+                timestamp TEXT
+            )''')
+conn.commit()
 
 # Function to calculate bill amount
-def calculate_bill(start_date, end_date, rate_per_day):
+def calculate_bill(start_date, end_date, rate_per_day, quantity):
+    if end_date < start_date:
+        st.error("End Date cannot be earlier than Start Date.")
+        return 0
     days_stored = (end_date - start_date).days
-    return days_stored * rate_per_day
+    return days_stored * rate_per_day * quantity
 
-# Title of the app
-st.title("Baser Cold Storage System")
+# Function to log history
+def log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount):
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        c.execute('''INSERT INTO history (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+                     (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp))
+        conn.commit()
+    except Exception as e:
+        st.error(f"Error logging history: {e}")
 
-# Form to add or update inventory items
-with st.form(key='inventory_form'):
-    name = st.text_input("Name")
-    gst_number = st.text_input("GST Number")
-    start_date = st.date_input("Start Date")
-    end_date = st.date_input("End Date")
-    quantity = st.number_input("Quantity", min_value=0)
-    rate_per_day = st.number_input("Rate per Day", min_value=0.0)
-    
-    # Calculate bill amount
-    if start_date and end_date:
-        bill_amount = calculate_bill(start_date, end_date, rate_per_day)
-    else:
-        bill_amount = 0
-    
-    submit_button = st.form_submit_button(label='Add/Update Item')
+# Sidebar for navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.selectbox("Select a page", ["Add Item", "Update Item", "Delete Item", "View Items", "History"])
 
-# Add or update the inventory item
-if submit_button:
-    new_item = pd.DataFrame([{
-        'Name': name,
-        'GST Number': gst_number,
-        'Start Date': start_date,
-        'End Date': end_date,
-        'Quantity': quantity,
-        'Rate per Day': rate_per_day,
-        'Bill Amount': bill_amount
-    }])
-    
-    # Check if the item already exists
-    existing_item_index = st.session_state['inventory_data'][st.session_state['inventory_data']['Name'] == name].index
-    if not existing_item_index.empty:
-        st.session_state['inventory_data'].loc[existing_item_index] = new_item.iloc[0]
-        st.success("Item updated successfully!")
-    else:
-        st.session_state['inventory_data'] = pd.concat([st.session_state['inventory_data'], new_item], ignore_index=True)
-        st.success("Item added successfully!")
+# Add Item Page
+if page == "Add Item":
+    st.title("Add Inventory Item")
+    with st.form(key='add_item_form'):
+        name = st.text_input("Name")
+        gst_number = st.text_input("GST Number")
+        start_date = st.date_input("Start Date", min_value=date(1900, 1, 1))
+        end_date = st.date_input("End Date", min_value=date(1900, 1, 1))
+        quantity = st.number_input("Quantity", min_value=0)
+        rate_per_day = st.number_input("Rate per Day", min_value=0.0)
+        payment_amount = st.number_input("Payment Amount", min_value=0.0)
 
-# Display the inventory data
-st.subheader("Inventory Data")
-st.dataframe(st.session_state['inventory_data'])
+        # Calculate bill amount
+        bill_amount = calculate_bill(start_date, end_date, rate_per_day, quantity)
 
-# Option to delete an item
-delete_name = st.text_input("Enter the Name of the item to delete")
-if st.button("Delete Item"):
-    st.session_state['inventory_data'] = st.session_state['inventory_data'][st.session_state['inventory_data']['Name'] != delete_name]
-    st.success("Item deleted successfully!")
+        submit_button = st.form_submit_button(label='Add Item')
+
+    if submit_button:
+        try:
+            c.execute('''INSERT INTO inventory (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount))
+            conn.commit()
+            st.success("Item added successfully!")
+        except Exception as e:
+            st.error(f"Error adding item: {e}")
+
+# Update Item Page
+elif page == "Update Item":
+    st.title("Update Inventory Item")
+    item_id = st.number_input("Enter the ID of the item to update", min_value=1)
+
+    if (st.button("Load Item", on_click=callback) or st.session_state.button_clicked):
+        try:
+            c.execute("SELECT * FROM inventory WHERE id=?", (item_id,))
+            item = c.fetchone()
+
+            if item:
+                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8]
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                with st.form(key='update_item_form'):
+                    name = st.text_input("Name", value=name)
+                    gst_number = st.text_input("GST Number", value=gst_number)
+                    start_date = st.date_input("Start Date", value=start_date)
+                    end_date = st.date_input("End Date", value=end_date)
+                    quantity = st.number_input("Quantity", min_value=0, value=quantity)
+                    rate_per_day = st.number_input("Rate per Day", min_value=0.0, value=rate_per_day)
+                    payment_amount = st.number_input("Payment Amount", min_value=0.0, value=payment_amount)
+
+                    # Calculate bill amount
+                    bill_amount = calculate_bill(start_date, end_date, rate_per_day, quantity)
+
+                    submit_button = st.form_submit_button(label='Update Item')
+
+                    if submit_button:
+                        try:
+                            c.execute('''UPDATE inventory SET
+                                         name=?, gst_number=?, start_date=?, end_date=?, quantity=?, rate_per_day=?, bill_amount=?, payment_amount=?
+                                         WHERE id=?''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_id))
+                            conn.commit()
+                            log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
+                            st.success("Item updated successfully!")
+                        except Exception as e:
+                            st.error(f"Error updating item: {e}")
+        except Exception as e:
+            st.error(f"Error loading item: {e}")
+
+# Delete Item Page
+elif page == "Delete Item":
+    st.title("Delete Inventory Item")
+    item_id = st.number_input("Enter the ID of the item to delete", min_value=1)
+    if st.button("Delete Item"):
+        try:
+            c.execute("DELETE FROM inventory WHERE id=?", (item_id,))
+            conn.commit()
+            st.success("Item deleted successfully!")
+        except Exception as e:
+            st.error(f"Error deleting item: {e}")
+
+# View Items Page
+elif page == "View Items":
+    st.title("View Inventory Items")
+    try:
+        inventory_data = pd.read_sql_query("SELECT * FROM inventory", conn)
+        st.dataframe(inventory_data)
+    except Exception as e:
+        st.error(f"Error fetching items: {e}")
+
+# History Page
+elif page == "History":
+    st.title("Inventory History")
+    try:
+        history_data = pd.read_sql_query("SELECT * FROM history", conn)
+        st.dataframe(history_data)
+    except Exception as e:
+        st.error(f"Error fetching history: {e}")
+
+# Close the database connection
+conn.close()

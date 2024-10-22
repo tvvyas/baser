@@ -117,51 +117,55 @@ if page == "Add Item":
 # Update Item Page
 elif page == "Update Item":
     st.title("Update Inventory Item")
-    item_id = st.number_input("Enter the ID of the item to update", min_value=1)
 
-    if (st.button("Load Item", on_click=callback) or st.session_state.button_clicked):
-        try:
-            c.execute("SELECT * FROM inventory WHERE id=?", (item_id,))
-            item = c.fetchone()
+    # Retrieve customer names from the database
+    c.execute("SELECT name FROM inventory")
+    customer_names = [row[0] for row in c.fetchall()]
 
-            if item:
-                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9], item[10], item[11], item[12], item[13]
-                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-                item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d').date()
-                item_outgoing_date = datetime.strptime(item_outgoing_date, '%Y-%m-%d').date()
+    # Create a dropdown for selecting the customer name
+    selected_customer = st.selectbox("Select Customer", customer_names)
 
-                with st.form(key='update_item_form'):
-                    name = st.text_input("Name", value=name)
-                    gst_number = st.text_input("GST Number", value=gst_number)
-                    start_date = st.date_input("Start Date", value=start_date)
-                    end_date = st.date_input("End Date", value=end_date)
-                    quantity = st.number_input("Quantity", min_value=0, value=quantity)
-                    rate_per_day = st.number_input("Rate per Day", min_value=0.0, value=rate_per_day)
-                    payment_amount = st.number_input("Payment Amount", min_value=0.0, value=payment_amount)
-                    item_name = st.text_input("Item Name", value=item_name)
-                    item_storage_location = st.text_input("Item Storage Location", value=item_storage_location)
-                    item_incoming_date = st.date_input("Item Incoming Date", value=item_incoming_date)
-                    item_outgoing_date = st.date_input("Item Outgoing Date", value=item_outgoing_date)
-                    labour_change = st.text_input("Labour Change", value=labour_change)
+    if selected_customer:
+        # Fetch the item details based on the selected customer name
+        c.execute("SELECT * FROM inventory WHERE name=?", (selected_customer,))
+        item = c.fetchone()
 
-                    # Calculate bill amount
-                    bill_amount = calculate_bill(start_date, end_date, rate_per_day, quantity)
+        if item:
+            name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9], item[10], item[11], item[12], item[13]
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d').date()
+            item_outgoing_date = datetime.strptime(item_outgoing_date, '%Y-%m-%d').date()
 
-                    submit_button = st.form_submit_button(label='Update Item')
+            with st.form(key='update_item_form'):
+                name = st.text_input("Name", value=name)
+                gst_number = st.text_input("GST Number", value=gst_number)
+                start_date = st.date_input("Start Date", value=start_date)
+                end_date = st.date_input("End Date", value=end_date)
+                quantity = st.number_input("Quantity", min_value=0, value=quantity)
+                rate_per_day = st.number_input("Rate per Day", min_value=0.0, value=rate_per_day)
+                payment_amount = st.number_input("Payment Amount", min_value=0.0, value=payment_amount)
+                  item_name = st.text_input("Item Name", value=item_name)
+                item_storage_location = st.text_input("Item Storage Location", value=item_storage_location)
+                item_incoming_date = st.date_input("Item Incoming Date", value=item_incoming_date)
+                item_outgoing_date = st.date_input("Item Outgoing Date", value=item_outgoing_date)
+                labour_change = st.text_input("Labour Change", value=labour_change)
 
-                if submit_button:
-                    try:
-                        c.execute('''UPDATE inventory SET
-                                   name=?, gst_number=?, start_date=?, end_date=?, quantity=?, rate_per_day=?, bill_amount=?, payment_amount=?, item_name=?, item_storage_location=?, item_incoming_date=?, item_outgoing_date=?, labour_change=?
-                                   WHERE id=?''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change, item_id))
-                        conn.commit()
-                        log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
-                        st.success("Item updated successfully!")
-                    except Exception as e:
-                        st.error(f"Error updating item: {e}")
-        except Exception as e:
-            st.error(f"Error loading item: {e}")
+                # Calculate bill amount
+                bill_amount = calculate_bill(start_date, end_date, rate_per_day, quantity)
+
+                submit_button = st.form_submit_button(label='Update Item')
+
+            if submit_button:
+                try:
+                    c.execute('''UPDATE inventory SET
+                               name=?, gst_number=?, start_date=?, end_date=?, quantity=?, rate_per_day=?, bill_amount=?, payment_amount=?, item_name=?, item_storage_location=?, item_incoming_date=?, item_outgoing_date=?, labour_change=?
+                               WHERE name=?''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change, selected_customer))
+                    conn.commit()
+                    log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
+                    st.success("Item updated successfully!")
+                except Exception as e:
+                    st.error(f"Error updating item: {e}")
 
 # Delete Item Page
 elif page == "Delete Item":

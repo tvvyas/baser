@@ -21,30 +21,40 @@ c = conn.cursor()
 
 # Create inventory and history tables if they don't exist
 c.execute('''CREATE TABLE IF NOT EXISTS inventory (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                gst_number TEXT,
-                start_date TEXT,
-                end_date TEXT,
-                quantity INTEGER,
-                rate_per_day REAL,
-                bill_amount REAL,
-                payment_amount REAL DEFAULT 0
-            )''')
+    id INTEGER PRIMARY KEY,
+    name TEXT,
+    gst_number TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    quantity INTEGER,
+    rate_per_day REAL,
+    bill_amount REAL,
+    payment_amount REAL DEFAULT 0,
+    item_name TEXT,
+    item_storage_location TEXT,
+    item_incoming_date TEXT,
+    item_outgoing_date TEXT,
+    labour_change TEXT
+)''')
 
 c.execute('''CREATE TABLE IF NOT EXISTS history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                inventory_id INTEGER,
-                name TEXT,
-                gst_number TEXT,
-                start_date TEXT,
-                end_date TEXT,
-                quantity INTEGER,
-                rate_per_day REAL,
-                bill_amount REAL,
-                payment_amount REAL,
-                timestamp TEXT
-            )''')
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    inventory_id INTEGER,
+    name TEXT,
+    gst_number TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    quantity INTEGER,
+    rate_per_day REAL,
+    bill_amount REAL,
+    payment_amount REAL,
+    timestamp TEXT,
+    item_name TEXT,
+    item_storage_location TEXT,
+    item_incoming_date TEXT,
+    item_outgoing_date TEXT,
+    labour_change TEXT
+)''')
 conn.commit()
 
 # Function to calculate bill amount
@@ -56,12 +66,12 @@ def calculate_bill(start_date, end_date, rate_per_day, quantity):
     return days_stored * rate_per_day * quantity
 
 # Function to log history
-def log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount):
+def log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     try:
-        c.execute('''INSERT INTO history (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
-                     (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp))
+        c.execute('''INSERT INTO history (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                   (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change))
         conn.commit()
     except Exception as e:
         st.error(f"Error logging history: {e}")
@@ -81,6 +91,11 @@ if page == "Add Item":
         quantity = st.number_input("Quantity", min_value=0)
         rate_per_day = st.number_input("Rate per Day", min_value=0.0)
         payment_amount = st.number_input("Payment Amount", min_value=0.0)
+        item_name = st.text_input("Item Name")
+        item_storage_location = st.text_input("Item Storage Location")
+        item_incoming_date = st.date_input("Item Incoming Date", min_value=date(1900, 1, 1))
+        item_outgoing_date = st.date_input("Item Outgoing Date", min_value=date(1900, 1, 1))
+        labour_change = st.text_input("Labour Change")
 
         # Calculate bill amount
         bill_amount = calculate_bill(start_date, end_date, rate_per_day, quantity)
@@ -89,12 +104,12 @@ if page == "Add Item":
 
     if submit_button:
         try:
-            c.execute('''INSERT INTO inventory (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount))
+            c.execute('''INSERT INTO inventory (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change))
             conn.commit()
             # Get the id of the last inserted item
             inventory_id = c.lastrowid
-            log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
+            log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
             st.success("Item added successfully!")
         except Exception as e:
             st.error(f"Error adding item: {e}")
@@ -110,9 +125,11 @@ elif page == "Update Item":
             item = c.fetchone()
 
             if item:
-                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8]
+                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9], item[10], item[11], item[12], item[13]
                 start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
                 end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+                item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d').date()
+                item_outgoing_date = datetime.strptime(item_outgoing_date, '%Y-%m-%d').date()
 
                 with st.form(key='update_item_form'):
                     name = st.text_input("Name", value=name)
@@ -122,22 +139,27 @@ elif page == "Update Item":
                     quantity = st.number_input("Quantity", min_value=0, value=quantity)
                     rate_per_day = st.number_input("Rate per Day", min_value=0.0, value=rate_per_day)
                     payment_amount = st.number_input("Payment Amount", min_value=0.0, value=payment_amount)
+                    item_name = st.text_input("Item Name", value=item_name)
+                    item_storage_location = st.text_input("Item Storage Location", value=item_storage_location)
+                    item_incoming_date = st.date_input("Item Incoming Date", value=item_incoming_date)
+                    item_outgoing_date = st.date_input("Item Outgoing Date", value=item_outgoing_date)
+                    labour_change = st.text_input("Labour Change", value=labour_change)
 
                     # Calculate bill amount
                     bill_amount = calculate_bill(start_date, end_date, rate_per_day, quantity)
 
                     submit_button = st.form_submit_button(label='Update Item')
 
-                    if submit_button:
-                        try:
-                            c.execute('''UPDATE inventory SET
-                                         name=?, gst_number=?, start_date=?, end_date=?, quantity=?, rate_per_day=?, bill_amount=?, payment_amount=?
-                                         WHERE id=?''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_id))
-                            conn.commit()
-                            log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
-                            st.success("Item updated successfully!")
-                        except Exception as e:
-                            st.error(f"Error updating item: {e}")
+                if submit_button:
+                    try:
+                        c.execute('''UPDATE inventory SET
+                                   name=?, gst_number=?, start_date=?, end_date=?, quantity=?, rate_per_day=?, bill_amount=?, payment_amount=?, item_name=?, item_storage_location=?, item_incoming_date=?, item_outgoing_date=?, labour_change=?
+                                   WHERE id=?''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change, item_id))
+                        conn.commit()
+                        log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
+                        st.success("Item updated successfully!")
+                    except Exception as e:
+                        st.error(f"Error updating item: {e}")
         except Exception as e:
             st.error(f"Error loading item: {e}")
 
@@ -150,10 +172,10 @@ elif page == "Delete Item":
             c.execute("SELECT * FROM inventory WHERE id=?", (item_id,))
             item = c.fetchone()
             if item:
-                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8]
+                name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9], item[10], item[11], item[12], item[13]
                 c.execute("DELETE FROM inventory WHERE id=?", (item_id,))
                 conn.commit()
-                log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount)
+                log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
                 st.success("Item deleted successfully!")
             else:
                 st.error("Item not found.")

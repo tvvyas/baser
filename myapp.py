@@ -145,7 +145,7 @@ elif page == "Update Item":
                 quantity = st.number_input("Quantity", min_value=0, value=quantity)
                 rate_per_day = st.number_input("Rate per Day", min_value=0.0, value=rate_per_day)
                 payment_amount = st.number_input("Payment Amount", min_value=0.0, value=payment_amount)
-                  item_name = st.text_input("Item Name", value=item_name)
+                item_name = st.text_input("Item Name", value=item_name)
                 item_storage_location = st.text_input("Item Storage Location", value=item_storage_location)
                 item_incoming_date = st.date_input("Item Incoming Date", value=item_incoming_date)
                 item_outgoing_date = st.date_input("Item Outgoing Date", value=item_outgoing_date)

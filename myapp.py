@@ -10,7 +10,6 @@ if 'button_clicked' not in st.session_state:
 def callback():
     st.session_state.button_clicked = True
 
-
 # Retrieve database credentials from Streamlit app settings
 db_name = st.secrets["database"]["name"]
 db_username = st.secrets["database"]["username"]
@@ -137,7 +136,8 @@ elif page == "Update Item":
             name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9], item[10], item[11], item[12], item[13]
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-            item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d').date()
+            item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d
+	    item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d').date()
             item_outgoing_date = datetime.strptime(item_outgoing_date, '%Y-%m-%d').date()
 
             with st.form(key='update_item_form'):
@@ -160,10 +160,14 @@ elif page == "Update Item":
                 submit_button = st.form_submit_button(label='Update Item')
 
             if submit_button:
+                # Get the item ID from the database based on the selected customer name
+                c.execute("SELECT id FROM inventory WHERE name=?", (selected_customer,))
+                item_id = c.fetchone()[0]
+
                 try:
                     c.execute('''UPDATE inventory SET
                                name=?, gst_number=?, start_date=?, end_date=?, quantity=?, rate_per_day=?, bill_amount=?, payment_amount=?, item_name=?, item_storage_location=?, item_incoming_date=?, item_outgoing_date=?, labour_change=?
-                               WHERE name=?''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change, selected_customer))
+                               WHERE id=?''', (name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change, item_id))
                     conn.commit()
                     log_history(item_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
                     st.success("Item updated successfully!")

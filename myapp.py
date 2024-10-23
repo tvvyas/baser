@@ -8,7 +8,8 @@ if 'button_clicked' not in st.session_state:
     st.session_state.button_clicked = False
 
 def callback():
-    st.session_state.button_clicked = True
+    st.session_state.button_clicked = True   
+
 
 # Retrieve database credentials from Streamlit app settings
 db_name = st.secrets["database"]["name"]
@@ -17,9 +18,10 @@ db_password = st.secrets["database"]["password"]
 
 # Connect to SQLite database using credentials
 conn = sqlite3.connect(f'{db_name}.db')
-c = conn.cursor()
+conn.row_factory = sqlite3.Row  # Use row factory for easier data access
 
 # Create inventory and history tables if they don't exist
+c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS inventory (
     id INTEGER PRIMARY KEY,
     name TEXT,
@@ -69,9 +71,10 @@ def calculate_bill(start_date, end_date, rate_per_day, quantity):
 def log_history(inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     try:
+        # Use named placeholders for clarity and security
         c.execute('''INSERT INTO history (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                   (inventory_id, name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, timestamp, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change))
+                   VALUES (:inventory_id, :name, :gst_number, :start_date, :end_date, :quantity, :rate_per_day, :bill_amount, :payment_amount, :timestamp, :item_name, :item_storage_location, :item_incoming_date, :item_outgoing_date, :labour_change)''',
+                   {'inventory_id': inventory_id, 'name': name, 'gst_number': gst_number, 'start_date': start_date, 'end_date': end_date, 'quantity': quantity, 'rate_per_day': rate_per_day, 'bill_amount': bill_amount, 'payment_amount': payment_amount, 'timestamp': timestamp, 'item_name': item_name, 'item_storage_location': item_storage_location, 'item_incoming_date': item_incoming_date, 'item_outgoing_date': item_outgoing_date, 'labour_change': labour_change})
         conn.commit()
     except Exception as e:
         st.error(f"Error logging history: {e}")

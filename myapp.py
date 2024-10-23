@@ -136,8 +136,7 @@ elif page == "Update Item":
             name, gst_number, start_date, end_date, quantity, rate_per_day, bill_amount, payment_amount, item_name, item_storage_location, item_incoming_date, item_outgoing_date, labour_change = item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], item[9], item[10], item[11], item[12], item[13]
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-            item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d
-	    item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d').date()
+            item_incoming_date = datetime.strptime(item_incoming_date, '%Y-%m-%d').date()
             item_outgoing_date = datetime.strptime(item_outgoing_date, '%Y-%m-%d').date()
 
             with st.form(key='update_item_form'):

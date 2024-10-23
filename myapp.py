@@ -8,7 +8,7 @@ if 'button_clicked' not in st.session_state:
     st.session_state.button_clicked = False
 
 def callback():
-    st.session_state.button_clicked = True   
+    st.session_state.button_clicked = True
 
 
 # Retrieve database credentials from Streamlit app settings
